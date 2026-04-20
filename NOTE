@@ -1,0 +1,717 @@
+BƯỚC 1: CÀI ĐẶT MÔI TRƯỜNG (Từng bước một)
+1.1 Cài Python
+Playwright yêu cầu Python 3.8 trở lên. Tôi khuyên dùng bản ổn định.
+
+👉 Làm theo từng bước:
+BƯỚC 1: Tải Python
+→ Vào https://www.python.org/downloads/
+→ Click "Download Python 3.12.x" (bản ổn định)
+BƯỚC 2: Cài đặt Python
+→ Chạy file .exe vừa tải
+→ ⚠️ QUAN TRỌNG: TICK vào ô "Add Python to PATH" ở màn hình đầu tiên
+→ Click "Install Now"
+→ Đợi cài xong → Click "Close"
+```[[1]](https://playwright.dev/python/docs/intro)
+
+"Make sure to mark Add Python to PATH otherwise you will have to do it explicitly."
+BƯỚC 3: Kiểm tra Python đã cài thành công
+→ Mở CMD (Windows + R → gõ "cmd" → Enter)
+→ Gõ lệnh:
+
+python --version
+
+→ Nếu hiện "Python 3.12.x" → THÀNH CÔNG ✅
+→ Nếu báo lỗi → Cài lại và nhớ tick "Add to PATH"
+
+## 1.2 Cài VS Code (IDE — nơi viết code)
+BƯỚC 1: Tải VS Code
+→ Vào https://code.visualstudio.com/
+→ Click "Download for Windows"
+→ Cài đặt bình thường (Next → Next → Install)
+
+BƯỚC 2: Cài Extension Python
+→ Mở VS Code
+→ Click icon Extensions (hình vuông bên trái) hoặc Ctrl+Shift+X
+→ Tìm "Python" → Cài extension của Microsoft
+→ Tìm "Playwright Test for VSCode" → Cài luôn (nếu có)
+
+## 1.3 Tạo Project và cài Playwright
+BƯỚC 1: Tạo folder project
+→ Tạo folder mới trên Desktop: "onelogistics-automation"
+
+BƯỚC 2: Mở folder bằng VS Code
+→ VS Code → File → Open Folder → chọn "onelogistics-automation"
+
+BƯỚC 3: Mở Terminal trong VS Code
+→ Menu Terminal → New Terminal (hoặc Ctrl + `)
+BƯỚC 4: Tạo Virtual Environment (môi trường ảo)
+→ Gõ lệnh sau trong Terminal:GeeksforGeeks
+
+python -m venv venv
+
+"Creating a virtual environment is a good practice to isolate your Python environment for different projects."
+BƯỚC 5: Kích hoạt Virtual Environment
+→ Windows:
+
+venv\Scripts\activate
+
+→ Nếu thành công, bạn sẽ thấy (venv) ở đầu dòng terminal:
+(venv) C:\Users\Hoan\Desktop\onelogistics-automation>
+BƯỚC 6: Cài Playwright + Pytest
+→ Gõ từng lệnh:
+
+pip install pytest-playwright
+playwright install
+
+"These commands download the Playwright package and install browser binaries for Chromium, Firefox and WebKit."
+BƯỚC 7: Kiểm tra cài đặt thành công
+→ Gõ:
+
+python -c "from playwright.sync_api import sync_playwright; print('Playwright OK!')"
+
+→ Nếu hiện "Playwright OK!" → THÀNH CÔNG ✅
+
+---
+
+# BƯỚC 2: CẤU TRÚC PROJECT THEO POM
+📁 onelogistics-automation/
+│
+├── 📁 pages/ ← Page Objects
+│ ├── init.py
+│ ├── login_page.py ← Login page elements + actions
+│ └── dashboard_page.py ← Dashboard page (sau login)
+│
+├── 📁 tests/ ← Test Scripts
+│ ├── init.py
+│ ├── test_login.py ← Test cases cho Login
+│ └── conftest.py ← Pytest fixtures (setup/teardown)
+│
+├── 📁 data/ ← Test Data
+│ └── test_data.py ← Username, password, URLs
+│
+├── pytest.ini ← Pytest configuration
+└── README.md ← Mô tả project
+
+### Tạo cấu trúc folders:
+→ Trong Terminal VS Code, gõ từng lệnh:
+
+mkdir pages
+mkdir tests
+mkdir data
+
+→ Tạo các file init.py (file rỗng, cần cho Python):
+
+type nul > pages_init_.py
+type nul > tests_init_.py
+
+---
+
+# BƯỚC 3: VIẾT CODE — TỪNG FILE MỘT
+
+## 📄 File 1: `data/test_data.py` — Chứa test data
+
+```python
+# data/test_data.py
+# ==========================================
+# TEST DATA - OneLogistics Login
+# ==========================================
+# ⚠️ Hoan: Thay bằng URL và credentials THẬT của QA environment
+# ==========================================
+
+# URL
+BASE_URL = "https://onelogistics-qa.example.com"    # ← THAY URL THẬT
+LOGIN_URL = f"{BASE_URL}/login"                       # ← THAY nếu URL login khác
+
+# Valid credentials
+VALID_USERNAME = "hoan.test@company.com"              # ← THAY username thật
+VALID_PASSWORD = "YourPassword123"                    # ← THAY password thật
+
+# Invalid credentials (dùng để test negative cases)
+INVALID_USERNAME = "wrong@company.com"
+INVALID_PASSWORD = "WrongPassword"
+EMPTY_STRING = ""
+
+# Expected values after login
+DASHBOARD_URL_KEYWORD = "dashboard"                   # ← URL sau login chứa từ gì?
+WELCOME_MESSAGE = "Welcome"                           # ← Message hiện sau login?
+PAGE_TITLE_AFTER_LOGIN = "OneLogistics"               # ← Title page sau login?
+
+# Error messages
+LOGIN_ERROR_MESSAGE = "Invalid username or password"  # ← Message lỗi khi login sai?
+REQUIRED_FIELD_MESSAGE = "This field is required"     # ← Message khi để trống?
+
+------------------------------------
+
+📄 File 2: pages/login_page.py — Page Object cho Login
+# pages/login_page.py
+# ==========================================
+# PAGE OBJECT - Login Page
+# ==========================================
+# Chứa tất cả elements và actions của trang Login
+# ==========================================
+
+class LoginPage:
+    """
+    Page Object cho trang Login của OneLogistics.
+    
+    ⚠️ Hoan cần làm:
+    1. Mở trang Login trên Chrome
+    2. Click chuột phải vào ô Username → Inspect
+    3. Tìm id, name, hoặc placeholder của element
+    4. Thay vào các locator bên dưới
+    """
+    
+    def __init__(self, page):
+        self.page = page
+        
+        # ==========================================
+        # LOCATORS - ⚠️ THAY BẰNG LOCATORS THẬT
+        # ==========================================
+        # Cách tìm locator:
+        #   Chrome → F12 → Click icon 🔍 → Click vào element
+        #   → Xem id, name, placeholder, class...
+        #
+        # Playwright hỗ trợ nhiều cách tìm element:
+        #   page.locator("#id")              → tìm theo ID
+        #   page.locator("[name='xxx']")     → tìm theo name
+        #   page.get_by_placeholder("xxx")   → tìm theo placeholder
+        #   page.get_by_role("button", name="xxx") → tìm theo role
+        #   page.get_by_text("xxx")          → tìm theo text
+        # ==========================================
+        
+        # Username field
+        # VD: <input id="txtUsername" placeholder="Enter your email" />
+        self.username_input = page.locator("#txtUsername")
+        # ↑ THAY "#txtUsername" bằng locator thật
+        
+        # Password field
+        # VD: <input id="txtPassword" placeholder="Enter password" />
+        self.password_input = page.locator("#txtPassword")
+        # ↑ THAY "#txtPassword" bằng locator thật
+        
+        # Login button
+        # VD: <button id="btnLogin">Sign In</button>
+        self.login_button = page.locator("#btnLogin")
+        # ↑ THAY "#btnLogin" bằng locator thật
+        
+        # Error message (hiện khi login sai)
+        # VD: <div class="error-message">Invalid credentials</div>
+        self.error_message = page.locator(".error-message")
+        # ↑ THAY ".error-message" bằng locator thật
+        
+        # Logo hoặc title trang login (dùng để verify đã vào trang login)
+        self.page_title = page.locator("h1")
+        # ↑ THAY nếu cần
+
+    # ==========================================
+    # ACTIONS - Các hành động trên trang Login
+    # ==========================================
+    
+    def navigate(self, url: str):
+        """Mở trang Login"""
+        self.page.goto(url)
+    
+    def fill_username(self, username: str):
+        """Nhập username"""
+        self.username_input.clear()
+        self.username_input.fill(username)
+    
+    def fill_password(self, password: str):
+        """Nhập password"""
+        self.password_input.clear()
+        self.password_input.fill(password)
+    
+    def click_login(self):
+        """Click nút Login"""
+        self.login_button.click()
+    
+    def login(self, username: str, password: str):
+        """
+        Action tổng hợp: Nhập username + password + click Login
+        Đây là action được REUSE nhiều nhất
+        """
+        self.fill_username(username)
+        self.fill_password(password)
+        self.click_login()
+    
+    def get_error_message(self) -> str:
+        """Lấy text error message"""
+        self.error_message.wait_for(state="visible", timeout=5000)
+        return self.error_message.text_content()
+    
+    def is_error_displayed(self) -> bool:
+        """Kiểm tra error message có hiển thị không"""
+        return self.error_message.is_visible()
+    
+    def is_login_page_loaded(self) -> bool:
+        """Kiểm tra trang Login đã load xong chưa"""
+        return self.username_input.is_visible() and \
+               self.password_input.is_visible() and \
+               self.login_button.is_visible()
+
+
+------------------------------------
+📄 File 3: pages/dashboard_page.py — Page Object cho Dashboard
+# pages/dashboard_page.py
+# ==========================================
+# PAGE OBJECT - Dashboard Page (sau khi login thành công)
+# ==========================================
+
+class DashboardPage:
+    """
+    Page Object cho trang Dashboard sau khi login.
+    
+    ⚠️ Hoan: Inspect trang Dashboard để tìm locators
+    """
+    
+    def __init__(self, page):
+        self.page = page
+        
+        # ==========================================
+        # LOCATORS - ⚠️ THAY BẰNG LOCATORS THẬT
+        # ==========================================
+        
+        # Welcome message
+        # VD: <span class="welcome-text">Welcome, Hoan!</span>
+        self.welcome_message = page.locator(".welcome-text")
+        # ↑ THAY bằng locator thật
+        
+        # User profile / avatar (chứng minh đã login)
+        self.user_profile = page.locator(".user-profile")
+        # ↑ THAY bằng locator thật
+        
+        # Navigation menu
+        self.nav_menu = page.locator("nav")
+        # ↑ THAY bằng locator thật
+        
+        # Logout button
+        self.logout_button = page.locator("#btnLogout")
+        # ↑ THAY bằng locator thật
+
+    # ==========================================
+    # ACTIONS
+    # ==========================================
+    
+    def get_welcome_text(self) -> str:
+        """Lấy text welcome message"""
+        self.welcome_message.wait_for(state="visible", timeout=10000)
+        return self.welcome_message.text_content()
+    
+    def is_dashboard_loaded(self) -> bool:
+        """Kiểm tra Dashboard đã load xong"""
+        return self.welcome_message.is_visible()
+    
+    def get_current_url(self) -> str:
+        """Lấy URL hiện tại"""
+        return self.page.url
+    
+    def click_logout(self):
+        """Click Logout"""
+        self.logout_button.click()
+
+--------------------------------------------
+📄 File 4: tests/conftest.py — Setup/Teardown (Pytest Fixtures)
+# tests/conftest.py
+# ==========================================
+# PYTEST FIXTURES - Setup & Teardown
+# ==========================================
+# File này chạy TỰ ĐỘNG trước/sau mỗi test
+# ==========================================
+
+import pytest
+from pages.login_page import LoginPage
+from pages.dashboard_page import DashboardPage
+from data.test_data import LOGIN_URL
+
+
+@pytest.fixture(scope="function")
+def login_page(page):
+    """
+    Fixture: Tạo LoginPage object và navigate đến trang Login
+    - Chạy TRƯỚC mỗi test
+    - 'page' là fixture có sẵn của pytest-playwright (tự tạo browser + page)
+    """
+    login = LoginPage(page)
+    login.navigate(LOGIN_URL)
+    return login
+
+
+@pytest.fixture(scope="function")
+def dashboard_page(page):
+    """
+    Fixture: Tạo DashboardPage object
+    """
+    return DashboardPage(page)
+
+---------------------------------------------
+📄 File 5: tests/test_login.py — CÁC TEST CASES ⭐
+# tests/test_login.py
+# ==========================================
+# TEST CASES - Login Feature
+# ==========================================
+# Đây là file CHÍNH chứa tất cả test cases cho Login
+# ==========================================
+
+import pytest
+from playwright.sync_api import expect
+from data.test_data import (
+    VALID_USERNAME,
+    VALID_PASSWORD,
+    INVALID_USERNAME,
+    INVALID_PASSWORD,
+    EMPTY_STRING,
+    DASHBOARD_URL_KEYWORD,
+    WELCOME_MESSAGE,
+    PAGE_TITLE_AFTER_LOGIN,
+    LOGIN_ERROR_MESSAGE,
+    REQUIRED_FIELD_MESSAGE,
+)
+
+
+class TestLoginPositive:
+    """
+    ✅ POSITIVE TEST CASES - Login thành công
+    """
+
+    def test_login_with_valid_credentials(self, login_page, dashboard_page, page):
+        """
+        TC-LOGIN-001: Verify user can login with valid credentials
+        
+        Precondition: User is on Login page
+        Steps:
+            1. Enter valid username
+            2. Enter valid password
+            3. Click Login button
+        Expected:
+            - Redirect to Dashboard page
+            - Welcome message is displayed
+        """
+        # Action
+        login_page.login(VALID_USERNAME, VALID_PASSWORD)
+        
+        # Assertions
+        # Verify URL chuyển đến Dashboard
+        expect(page).to_have_url(f".*{DASHBOARD_URL_KEYWORD}.*")
+        
+        # Verify Welcome message hiển thị
+        assert dashboard_page.is_dashboard_loaded(), \
+            "Dashboard should be loaded after successful login"
+
+    def test_login_page_elements_displayed(self, login_page):
+        """
+        TC-LOGIN-002: Verify all login page elements are displayed
+        
+        Precondition: User navigates to Login page
+        Steps:
+            1. Observe Login page
+        Expected:
+            - Username field is visible
+            - Password field is visible
+            - Login button is visible
+        """
+        # Assertions
+        assert login_page.is_login_page_loaded(), \
+            "All login page elements should be visible"
+
+
+class TestLoginNegative:
+    """
+    ❌ NEGATIVE TEST CASES - Login thất bại
+    """
+
+    def test_login_with_invalid_username(self, login_page):
+        """
+        TC-LOGIN-003: Verify error when login with invalid username
+        
+        Steps:
+            1. Enter INVALID username
+            2. Enter valid password
+            3. Click Login
+        Expected:
+            - Error message is displayed
+            - User stays on Login page
+        """
+        # Action
+        login_page.login(INVALID_USERNAME, VALID_PASSWORD)
+        
+        # Assertions
+        assert login_page.is_error_displayed(), \
+            "Error message should be displayed for invalid username"
+
+    def test_login_with_invalid_password(self, login_page):
+        """
+        TC-LOGIN-004: Verify error when login with invalid password
+        
+        Steps:
+            1. Enter valid username
+            2. Enter INVALID password
+            3. Click Login
+        Expected:
+            - Error message is displayed
+        """
+        # Action
+        login_page.login(VALID_USERNAME, INVALID_PASSWORD)
+        
+        # Assertions
+        assert login_page.is_error_displayed(), \
+            "Error message should be displayed for invalid password"
+
+    def test_login_with_empty_username(self, login_page):
+        """
+        TC-LOGIN-005: Verify error when username is empty
+        
+        Steps:
+            1. Leave username empty
+            2. Enter valid password
+            3. Click Login
+        Expected:
+            - Validation error / Required field message
+        """
+        # Action
+        login_page.login(EMPTY_STRING, VALID_PASSWORD)
+        
+        # Assertions
+        # ⚠️ Tùy vào app: có thể check error message hoặc check vẫn ở login page
+        assert login_page.is_error_displayed() or login_page.is_login_page_loaded(), \
+            "Should show error or stay on login page when username is empty"
+
+    def test_login_with_empty_password(self, login_page):
+        """
+        TC-LOGIN-006: Verify error when password is empty
+        
+        Steps:
+            1. Enter valid username
+            2. Leave password empty
+            3. Click Login
+        Expected:
+            - Validation error
+        """
+        # Action
+        login_page.login(VALID_USERNAME, EMPTY_STRING)
+        
+        # Assertions
+        assert login_page.is_error_displayed() or login_page.is_login_page_loaded(), \
+            "Should show error or stay on login page when password is empty"
+
+    def test_login_with_all_empty_fields(self, login_page):
+        """
+        TC-LOGIN-007: Verify error when both fields are empty
+        
+        Steps:
+            1. Leave username empty
+            2. Leave password empty
+            3. Click Login
+        Expected:
+            - Validation error
+        """
+        # Action
+        login_page.login(EMPTY_STRING, EMPTY_STRING)
+        
+        # Assertions
+        assert login_page.is_login_page_loaded(), \
+            "Should stay on login page when all fields are empty"
+
+
+class TestLoginSecurity:
+    """
+    🔒 SECURITY TEST CASES
+    """
+
+    def test_password_field_is_masked(self, login_page):
+        """
+        TC-LOGIN-008: Verify password field is masked (type='password')
+        
+        Steps:
+            1. Check password field type attribute
+        Expected:
+            - Input type = "password" (hiện *** thay vì plain text)
+        """
+        # Assertion
+        password_type = login_page.password_input.get_attribute("type")
+        assert password_type == "password", \
+            f"Password field should be masked, but type is '{password_type}'"
+
+
+---------------------------------------------
+File 6: pytest.ini — Configuration
+# pytest.ini
+[pytest]
+# Hiển thị output chi tiết
+addopts = -v --tb=short
+
+# Playwright settings
+# Chạy trên Chromium, có mở browser để xem (headed mode)
+# Khi đã ổn định, đổi thành --browser chromium (không có --headed) để chạy nhanh
+
+
+BƯỚC 4: TÌM LOCATORS CHO ONELOGISTICS
+⚠️ ĐÂY LÀ BƯỚC QUAN TRỌNG NHẤT — Bạn cần làm bước này trên máy mình
+
+Cách tìm Locator bằng Chrome DevTools:
+
+BƯỚC 1: Mở trang Login OneLogistics trên Chrome
+
+BƯỚC 2: Nhấn F12 (mở DevTools)
+
+BƯỚC 3: Click icon 🔍 (Select an element) ở góc trái DevTools
+         Hoặc nhấn Ctrl + Shift + C
+
+BƯỚC 4: Di chuột và CLICK vào ô Username trên trang web
+         → DevTools sẽ highlight dòng HTML của element đó
+
+BƯỚC 5: Ghi lại thông tin:
+
+
+Ví dụ bạn sẽ thấy:
+<input id="txtEmail" name="email" placeholder="Enter your email" class="form-control" type="text">
+
+→ Bạn ghi lại:
+   - id = "txtEmail"
+   - name = "email"  
+   - placeholder = "Enter your email"
+
+→ Dùng trong code:
+   self.username_input = page.locator("#txtEmail")
+   # HOẶC
+   self.username_input = page.get_by_placeholder("Enter your email")
+BƯỚC 6: Lặp lại cho:
+   ☐ Ô Username  → ghi lại id/name/placeholder
+   ☐ Ô Password  → ghi lại id/name/placeholder
+   ☐ Nút Login   → ghi lại id/name/text
+   ☐ Error message (nếu có) → ghi lại class/id
+   ☐ Dashboard elements (sau khi login)
+```[[4]](https://playwright.bootcss.com/python/docs/intro)
+
+### 🔥 CÁCH NHANH HƠN — Dùng Playwright Codegen:
+
+Bạn có thể sử dụng Playwright Codegen để tự động generate code — "This will open up a Chromium browser with the given site address and a code writer window."
+
+→ Mở Terminal trong VS Code, gõ:
+
+playwright codegen https://your-onelogistics-url.com/login
+
+→ Một cửa sổ Chrome MỚI sẽ mở ra + 1 cửa sổ code recorder
+→ Bạn thao tác bình thường (nhập username, password, click login)
+→ Playwright TỰ ĐỘNG viết code cho bạn! 🔥
+→ Copy code đó → dùng làm tham khảo cho locators
+
+
+---
+
+# BƯỚC 5: CHẠY TESTS
+
+### Chạy tất cả tests:
+```bash
+pytest tests/test_login.py -v --headed --browser chromium
+
+pytest                    → Tool chạy test
+tests/test_login.py       → File test cần chạy
+-v                        → Verbose mode (hiện chi tiết)
+--headed                  → Mở browser để BẠN XEM (bỏ đi nếu muốn chạy nhanh)
+--browser chromium        → Dùng Chrome
+
+Chạy 1 test cụ thể:
+# Chạy chỉ test login thành công
+pytest tests/test_login.py::TestLoginPositive::test_login_with_valid_credentials -v --headed
+
+# Chạy chỉ negative tests
+pytest tests/test_login.py::TestLoginNegative -v --headed
+
+Kết quả mong đợi:
+=================== test session starts ====================
+tests/test_login.py::TestLoginPositive::test_login_with_valid_credentials PASSED  ✅
+tests/test_login.py::TestLoginPositive::test_login_page_elements_displayed PASSED  ✅
+tests/test_login.py::TestLoginNegative::test_login_with_invalid_username PASSED    ✅
+tests/test_login.py::TestLoginNegative::test_login_with_invalid_password PASSED    ✅
+tests/test_login.py::TestLoginNegative::test_login_with_empty_username PASSED      ✅
+tests/test_login.py::TestLoginNegative::test_login_with_empty_password PASSED      ✅
+tests/test_login.py::TestLoginNegative::test_login_with_all_empty_fields PASSED    ✅
+tests/test_login.py::TestLoginSecurity::test_password_field_is_masked PASSED       ✅
+
+=================== 8 passed in 15.23s ====================
+
+
+BƯỚC 6: PUSH LÊN GITHUB (Để ghi vào CV)
+6.1 Cài Git
+text
+→ Tải Git: https://git-scm.com/downloads
+→ Cài đặt (Next → Next → Install)
+6.2 Tạo GitHub Repository
+text
+→ Vào https://github.com → Đăng ký/Đăng nhập
+→ Click "New Repository"
+→ Tên: onelogistics-automation
+→ Description: "Playwright automation tests for OneLogistics Login feature"
+→ Public (để interviewer xem được)
+→ Click "Create repository"
+6.3 Tạo file .gitignore
+text
+# .gitignore (tạo file này ở root project)
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+6.4 Tạo file README.md
+markdown
+# OneLogistics - Automation Tests
+
+## 🛠️ Tech Stack
+- **Tool:** Playwright (Python)
+- **Framework:** Pytest
+- **Pattern:** Page Object Model (POM)
+- **Browser:** Chromium
+
+## 📁 Project Structure
+├── pages/ # Page Objects
+├── tests/ # Test Scripts
+├── data/ # Test Data
+└── pytest.ini # Configuration
+
+text
+
+## 🧪 Test Cases
+| ID | Test Case | Type |
+|----|-----------|------|
+| TC-001 | Login with valid credentials | Positive |
+| TC-002 | Verify login page elements | Positive |
+| TC-003 | Login with invalid username | Negative |
+| TC-004 | Login with invalid password | Negative |
+| TC-005 | Login with empty username | Negative |
+| TC-006 | Login with empty password | Negative |
+| TC-007 | Login with all empty fields | Negative |
+| TC-008 | Password field is masked | Security |
+
+## 🚀 How to Run
+```bash
+pip install pytest-playwright
+playwright install
+pytest tests/test_login.py -v --headed --browser chromium
+text
+
+## 6.5 Push code lên GitHub
+
+```bash
+# Trong Terminal VS Code:
+git init
+git add .
+git commit -m "Initial commit: Login automation with Playwright POM"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/onelogistics-automation.git
+git push -u origin main
+
+
+📋 CHECKLIST — BẠN CẦN LÀM
+#	Việc cần làm	Trạng thái
+1	Cài Python 3.12	☐
+2	Cài VS Code + Python Extension	☐
+3	Tạo project folder + virtual environment	☐
+4	Cài pytest-playwright + playwright install	☐
+5	Tạo cấu trúc folders (pages, tests, data)	☐
+6	Copy toàn bộ code files ở trên vào project	☐
+7	⭐ Mở OneLogistics → F12 → Tìm locators	☐
+8	⭐ Thay locators vào login_page.py	☐
+9	⭐ Thay URL + credentials vào test_data.py	☐
+10	Chạy test: pytest tests/test_login.py -v --headed	☐
+11	Fix nếu có lỗi	☐
+12	Push lên GitHub	☐
